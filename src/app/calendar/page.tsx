@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import CalendarPage from "@/features/calendar/components/CalendarPage";
+import CalendarPage from "@features/calendar/components/CalendarPage";
 
 export const metadata: Metadata = {
   title: "Election Calendar",

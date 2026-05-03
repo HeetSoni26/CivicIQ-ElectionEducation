@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { EducatorDashboard } from "@/features/educators/components/EducatorDashboard";
+import { EducatorDashboard } from "@features/classroom-management/components/EducatorDashboard";
 
 export const metadata: Metadata = {
   title: "Educator Mode | CivicIQ",

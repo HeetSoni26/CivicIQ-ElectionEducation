@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import QuizPage from "@/features/quiz/components/QuizPage";
+import QuizPage from "@features/quiz/components/QuizPage";
 
 export const metadata: Metadata = {
   title: "Civic Knowledge Quiz",

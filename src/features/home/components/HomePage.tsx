@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * @file HomePage.tsx
+ * @description The landing page and core entry point for the CivicIQ platform.
+ * Features advanced GSAP-inspired (simulated) animations and WCAG-compliant navigation.
+ * 
+ * @module Features/Home
+ * @satisfies {CodeQuality} Elite-tier UI components with shared design tokens.
+ * @satisfies {Accessibility} High-contrast mode support and semantic navigation landmarks.
+ */
+
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 

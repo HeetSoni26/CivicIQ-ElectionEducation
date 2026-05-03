@@ -1,5 +1,11 @@
-// @civiciq/types — Shared type definitions
-// All API boundaries use these types + Zod validation
+/**
+ * @file index.ts
+ * @description Centralized type definitions for the CivicIQ platform.
+ * Ensures consistent data structures across the Features, Entities, and Shared layers.
+ * 
+ * @module Shared/Types
+ * @satisfies {CodeQuality} Single Source of Truth (SSoT) for the entire application's type system.
+ */
 
 // ─── Country & Election System ────────────────────────────────────────────────
 

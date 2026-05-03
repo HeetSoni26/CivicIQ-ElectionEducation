@@ -4,8 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { ChatMessageSchema } from "@/packages/types/schemas";
-import { createRAGPipeline } from "@/features/ai-chat/lib/RAGPipeline";
+import { ChatMessageSchema } from "@shared/types/schemas";
+import { createRAGPipeline } from "@features/ai-chat/lib/RAGPipeline";
 import { ZodError } from "zod";
 
 // ─── Gemini System Prompt ─────────────────────────────────────────────────────

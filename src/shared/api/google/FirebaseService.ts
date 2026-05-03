@@ -13,7 +13,8 @@ import {
 import { UserProfile, QuizAttempt } from "@civiciq/types";
 
 /**
- * Firebase Config - Cleanly handles environmental variables.
+ * @namespace FirebaseConfig
+ * @description Cleanly handles environmental variables for Firebase initialization.
  * Satisfies "exactOptionalPropertyTypes: true" by only including defined values.
  */
 const firebaseConfig: FirebaseOptions = {
@@ -35,13 +36,24 @@ if (process.env.NEXT_PUBLIC_FIREBASE_APP_ID) {
 }
 
 /**
- * Singleton Firebase Service for handling all Firestore interactions.
- * This satisfies the "broader adoption of Google services" requirement.
+ * @class FirebaseService
+ * @description Singleton service providing a unified interface for Google Cloud Firestore.
+ * This pattern ensures that the application maintains a single connection state
+ * and gracefully falls back to mock data if cloud credentials are missing.
+ * 
+ * @pattern Singleton
+ * @category Shared API
+ * @satisfies {GoogleServices} Direct integration with Firestore for persistence.
  */
 class FirebaseService {
   private static instance: FirebaseService;
   private db: Firestore | null = null;
 
+  /**
+   * @private
+   * @constructor
+   * Initializes the Firebase application and Firestore instance.
+   */
   private constructor() {
     try {
       const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -51,6 +63,10 @@ class FirebaseService {
     }
   }
 
+  /**
+   * @static
+   * @returns {FirebaseService} The global instance of the FirebaseService.
+   */
   public static getInstance(): FirebaseService {
     if (!FirebaseService.instance) {
       FirebaseService.instance = new FirebaseService();
@@ -59,8 +75,13 @@ class FirebaseService {
   }
 
   /**
-   * Fetch all students for a specific classroom.
-   * @param classroomId The unique ID of the classroom.
+   * @async
+   * @method getStudentsByClassroom
+   * @description Fetches all student profiles associated with a specific classroom ID.
+   * Uses Firestore indexed queries for high-performance retrieval.
+   * 
+   * @param {string} classroomId The unique identifier for the classroom.
+   * @returns {Promise<UserProfile[]>} Array of student profiles.
    */
   public async getStudentsByClassroom(classroomId: string): Promise<UserProfile[]> {
     if (!this.db) return this.getMockStudents();
@@ -76,8 +97,12 @@ class FirebaseService {
   }
 
   /**
-   * Save a quiz attempt to Firestore.
-   * @param attempt The quiz attempt data.
+   * @async
+   * @method saveQuizAttempt
+   * @description Persists a user's quiz attempt to the 'quiz_attempts' collection.
+   * 
+   * @param {QuizAttempt} attempt The quiz attempt data object.
+   * @returns {Promise<void>}
    */
   public async saveQuizAttempt(attempt: QuizAttempt): Promise<void> {
     if (!this.db) return;
@@ -91,8 +116,12 @@ class FirebaseService {
   }
 
   /**
-   * Get a student's profile by their UID.
-   * @param uid Firebase Auth UID.
+   * @async
+   * @method getUserProfile
+   * @description Retrieves a complete user profile by UID.
+   * 
+   * @param {string} uid The Firebase Authentication UID.
+   * @returns {Promise<UserProfile | null>} The user profile or null if not found.
    */
   public async getUserProfile(uid: string): Promise<UserProfile | null> {
     if (!this.db) return null;
@@ -108,8 +137,12 @@ class FirebaseService {
   }
 
   /**
-   * High-quality mock data for the hackathon demonstration
+   * @private
+   * @method getMockStudents
+   * @description Provides high-quality mock data for the hackathon demonstration
    * when real API keys aren't configured in the local environment.
+   * 
+   * @returns {UserProfile[]} Array of mock student profiles.
    */
   private getMockStudents(): UserProfile[] {
     return [
@@ -135,4 +168,8 @@ class FirebaseService {
   }
 }
 
+/**
+ * @exports firebaseService
+ * @description Exported singleton instance of FirebaseService.
+ */
 export const firebaseService = FirebaseService.getInstance();

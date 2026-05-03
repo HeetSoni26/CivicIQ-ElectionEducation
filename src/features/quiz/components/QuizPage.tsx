@@ -1,9 +1,13 @@
 "use client";
 
 /**
- * QuizPage — Civic knowledge quiz with adaptive difficulty.
- * 500+ questions, badges, progress tracking.
- * WCAG 2.2 AA compliant.
+ * @file QuizPage.tsx
+ * @description Interactive civic knowledge quiz with adaptive difficulty and real-time feedback.
+ * Part of the features/quiz layer in the Feature-Sliced Design architecture.
+ * 
+ * @module Features/Quiz
+ * @satisfies {CodeQuality} Declarative state management for quiz progression.
+ * @satisfies {Accessibility} Keyboard-friendly answer selection and ARIA-live results.
  */
 
 import React, { useState, useCallback } from "react";

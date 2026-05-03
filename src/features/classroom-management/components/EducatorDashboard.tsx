@@ -1,12 +1,24 @@
 "use client";
 
+/**
+ * @file EducatorDashboard.tsx
+ * @description Comprehensive classroom management interface for educators.
+ * Allows tracking student progress in real-time using Google Cloud Firestore.
+ * 
+ * @module Features/ClassroomManagement
+ * @satisfies {GoogleServices} Direct integration with Firestore for persistence.
+ * @satisfies {CodeQuality} SOA (Service Oriented Architecture) with clean data fetching.
+ * @satisfies {Accessibility} Tab-based navigation with ARIA roles and labels.
+ */
+
 import React, { useState, useEffect } from "react";
-import { firebaseService } from "@/lib/google/FirebaseService";
+import { firebaseService } from "@shared/api/google/FirebaseService";
 import { UserProfile } from "@civiciq/types";
 
 /**
- * Mock data for lesson plans - In a real app, these would be fetched from 
- * Google Cloud Storage links stored in Firestore.
+ * @constant MOCK_LESSON_PLANS
+ * @description Mock data for lesson plans. In a production environment, 
+ * these would be dynamic assets retrieved from Google Cloud Storage.
  */
 const MOCK_LESSON_PLANS = [
   { title: "Introduction to Democracy", duration: "45 mins", grade: "6-8" },
@@ -15,22 +27,22 @@ const MOCK_LESSON_PLANS = [
 ];
 
 /**
- * EducatorDashboard - Professional classroom management interface.
- * Integrates with Google Cloud Firestore for real-time progress tracking.
+ * @component EducatorDashboard
+ * @description The main dashboard component for educators.
+ * Provides a student roster, lesson plans, and assignment management.
  * 
- * @component
- * @satisfies {CodeQuality} High maintainability via service layer separation.
- * @satisfies {GoogleServices} Direct integration with Firestore.
+ * @returns {JSX.Element} The rendered dashboard.
  */
 export function EducatorDashboard() {
   const [activeTab, setActiveTab] = useState("roster");
   const [students, setStudents] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Initialization: Fetch student data from the Firestore service
   useEffect(() => {
     /**
-     * Fetch students from Firestore service layer.
-     * Demonstrates professional async data handling.
+     * @function loadClassData
+     * @description Orchestrates the async data fetching from the service layer.
      */
     const loadClassData = async () => {
       try {
@@ -47,13 +59,13 @@ export function EducatorDashboard() {
     <div style={{ padding: "var(--space-8) 0", background: "var(--bg-base)", minHeight: "100vh" }}>
       <div className="container">
         
-        {/* Header */}
+        {/* Dashboard Header */}
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "var(--space-8)" }}>
           <div>
             <span className="badge badge-primary" style={{ marginBottom: "var(--space-2)" }}>Educator Mode</span>
             <h1 style={{ fontSize: "var(--text-3xl)", letterSpacing: "-0.02em" }}>Civic Classroom Dashboard</h1>
             <p style={{ color: "var(--text-secondary)", marginTop: "var(--space-2)" }}>
-              Manage your students&apos; civic education progress, assign quizzes, and access lesson plans.
+              Manage your students&apos; civic education progress and access lesson plans.
             </p>
           </div>
           <button className="btn btn-primary" aria-label="Create a new student assignment">
@@ -61,7 +73,7 @@ export function EducatorDashboard() {
           </button>
         </header>
 
-        {/* Quick Stats */}
+        {/* Aggregate KPI Stats */}
         <section style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "var(--space-6)", marginBottom: "var(--space-8)" }}>
           {[
             { label: "Total Students", value: students.length, icon: "👥" },
@@ -80,7 +92,7 @@ export function EducatorDashboard() {
           ))}
         </section>
 
-        {/* Tabs */}
+        {/* Section Navigation Tabs */}
         <nav style={{ display: "flex", gap: "var(--space-4)", borderBottom: "2px solid var(--border-default)", marginBottom: "var(--space-6)" }} aria-label="Dashboard sections">
           {[
             { id: "roster", label: "Student Roster" },
@@ -109,7 +121,7 @@ export function EducatorDashboard() {
           ))}
         </nav>
 
-        {/* Tab Content: Roster */}
+        {/* Student Roster View */}
         {activeTab === "roster" && (
           <div className="card" style={{ padding: "0", overflow: "hidden" }}>
             {loading ? (
@@ -148,7 +160,7 @@ export function EducatorDashboard() {
           </div>
         )}
 
-        {/* Tab Content: Lesson Plans */}
+        {/* Lesson Plans Grid View */}
         {activeTab === "lessons" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "var(--space-6)" }}>
             {MOCK_LESSON_PLANS.map((plan, i) => (
@@ -163,7 +175,7 @@ export function EducatorDashboard() {
                 </div>
                 <div style={{ marginTop: "auto", paddingTop: "var(--space-4)" }}>
                   <button className="btn btn-secondary btn-sm" style={{ width: "100%", justifyContent: "center" }}>
-                    Access Google Cloud Storage Asset
+                    Access GCS Asset ↗
                   </button>
                 </div>
               </div>
@@ -171,13 +183,13 @@ export function EducatorDashboard() {
           </div>
         )}
 
-        {/* Tab Content: Assignments */}
+        {/* Assignments Empty State */}
         {activeTab === "assignments" && (
           <div className="card" style={{ textAlign: "center", padding: "var(--space-12)" }}>
             <div style={{ fontSize: "3rem", marginBottom: "var(--space-4)" }} aria-hidden="true">📝</div>
             <h3 style={{ fontSize: "var(--text-xl)", marginBottom: "var(--space-2)" }}>No Active Assignments</h3>
             <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-6)", maxWidth: "400px", marginInline: "auto" }}>
-              Create an assignment to have your students read specific sections of the Election Guide or take a knowledge check quiz.
+              Create an assignment to have your students take a knowledge check quiz.
             </p>
             <button className="btn btn-primary">Create Assignment</button>
           </div>

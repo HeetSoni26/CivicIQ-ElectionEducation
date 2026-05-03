@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import HomePage from "@/features/home/components/HomePage";
+import HomePage from "@features/home/components/HomePage";
 
 export const metadata: Metadata = {
   title: "CivicIQ — Election Process Education Assistant",

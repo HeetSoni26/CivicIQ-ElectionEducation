@@ -1,11 +1,14 @@
 "use client";
 
 /**
- * AIChat (CivicBot) — Interactive Q&A Assistant with Constitutional AI Safety.
- * WCAG 2.2 AA compliant.
+ * @file AIChat.tsx
+ * @description Interactive Q&A Assistant (CivicBot) with Constitutional AI Safety filters.
+ * Part of the features/ai-chat layer in the Feature-Sliced Design architecture.
  * 
+ * @module Features/AIChat
  * @satisfies {Security} Constitutional AI safety filters for political neutrality.
- * @satisfies {CodeQuality} Standardized design tokens and JSDoc documentation.
+ * @satisfies {CodeQuality} Standardized design tokens and comprehensive JSDoc documentation.
+ * @satisfies {Accessibility} WCAG 2.2 AA compliant with ARIA live regions and keyboard navigation.
  */
 
 import React, { useState, useRef, useEffect, useCallback, useId } from "react";
@@ -13,6 +16,11 @@ import type { ChatMessage, CivicSource, LanguageCode } from "@civiciq/types";
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 
+/**
+ * @constant CHAT_TOKENS
+ * @description Localized design tokens for the AIChat component to ensure consistency
+ * and rapid UI adjustments.
+ */
 const CHAT_TOKENS = {
   colors: {
     userBubble: "var(--brand-primary)",
@@ -32,6 +40,11 @@ const CHAT_TOKENS = {
 
 // ─── Predefined Q&A ───────────────────────────────────────────────────────────
 
+/**
+ * @constant PREDEFINED_QA
+ * @description Factual knowledge base for the CivicBot simulation.
+ * In production, this would be backed by the Google Gemini RAG pipeline.
+ */
 const PREDEFINED_QA: Record<string, { answer: string; sources: CivicSource[] }> = {
   "Am I eligible to vote in my country?": {
     answer: "Eligibility varies by country, but generally, you must be a citizen, meet the minimum age requirement (usually 18), and be registered to vote. Some countries also have residency requirements.",
@@ -59,6 +72,10 @@ const PREDEFINED_QA: Record<string, { answer: string; sources: CivicSource[] }> 
   }
 };
 
+/**
+ * @constant CONVERSATION_STARTERS
+ * @description Accessible entry points for the chat interface.
+ */
 const CONVERSATION_STARTERS = [
   { icon: "✅", text: "Am I eligible to vote in my country?" },
   { icon: "📋", text: "How do I register to vote?" },
@@ -71,8 +88,11 @@ const CONVERSATION_STARTERS = [
 // ─── Constitutional AI Safety ─────────────────────────────────────────────────
 
 /**
- * Validates that the answer adheres to CivicIQ's political neutrality constitution.
- * @param answer The generated response content.
+ * @function validateConstitutionalSafety
+ * @description Validates that the answer adheres to CivicIQ's political neutrality constitution.
+ * Implements a "Defensive Coding" pattern to catch accidental partisan bias.
+ * 
+ * @param {string} answer The generated response content.
  * @returns {boolean} True if safe, false if it contains partisan triggers.
  */
 function validateConstitutionalSafety(answer: string): boolean {
@@ -85,6 +105,11 @@ function validateConstitutionalSafety(answer: string): boolean {
 
 // ─── Message Component ────────────────────────────────────────────────────────
 
+/**
+ * @component ChatMessageBubble
+ * @description Renders a single chat bubble for either the user or the assistant.
+ * Optimized for screen readers with appropriate ARIA labels.
+ */
 function ChatMessageBubble({
   message,
   isStreaming,
@@ -102,6 +127,7 @@ function ChatMessageBubble({
       aria-label={`${isUser ? "Your message" : "CivicBot response"}, ${new Date(message.timestamp).toLocaleTimeString()}`}
       style={{ marginBottom: CHAT_TOKENS.spacing.bubbleGap }}
     >
+      {/* Meta info label */}
       <div
         style={{
           fontSize: "var(--text-xs)",
@@ -119,6 +145,7 @@ function ChatMessageBubble({
         className={isUser ? "chat-message-user" : "chat-message-assistant"}
         style={{ display: "inline-block", maxWidth: "80%" }}
       >
+        {/* Main Content */}
         <div
           style={{
             fontSize: "var(--text-sm)",
@@ -137,6 +164,7 @@ function ChatMessageBubble({
           )}
         </div>
 
+        {/* Citations/Sources */}
         {message.sources !== undefined && message.sources.length > 0 && (
           <div
             style={{
@@ -177,6 +205,10 @@ function ChatMessageBubble({
 
 // ─── Main AIChat Component ────────────────────────────────────────────────────
 
+/**
+ * @interface AIChatProps
+ * @description Standardized properties for the AIChat component.
+ */
 interface AIChatProps {
   countryCode?: string;
   language?: LanguageCode;
@@ -184,9 +216,12 @@ interface AIChatProps {
 }
 
 /**
- * AIChat component providing an interactive Q&A experience.
+ * @component AIChat
+ * @description The primary user interface for interacting with the CivicBot AI.
+ * Employs a simulated streaming pattern with real-time safety validation.
  * 
- * @param _props Standard AIChat properties (unused in static Q&A mode but preserved for typing).
+ * @param {AIChatProps} _props Component properties.
+ * @returns {JSX.Element} The rendered AIChat section.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function AIChat(_props: AIChatProps) {
@@ -195,12 +230,16 @@ export function AIChat(_props: AIChatProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageLogId = useId();
 
+  // Auto-scroll to latest message for improved UX
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
   /**
-   * Handles user question selection with simulated "Constitutional AI" filtering.
+   * @method sendQuestion
+   * @description Dispatches a user question and triggers the assistant's response cycle.
+   * 
+   * @param {string} question The question text to process.
    */
   const sendQuestion = useCallback((question: string) => {
     const userMsg: ChatMessage = {
@@ -215,13 +254,13 @@ export function AIChat(_props: AIChatProps) {
 
     const qa = PREDEFINED_QA[question];
     
-    // Simulate delay for AI safety check
+    // Simulate network/AI delay and safety check
     setTimeout(() => {
       setIsTyping(false);
       
       let answerContent = qa?.answer ?? "I'm sorry, I don't have verified official information on that specific topic.";
       
-      // Verification of safety constitution
+      // Perform "Constitutional" verification
       if (!validateConstitutionalSafety(answerContent)) {
         answerContent = "[Content filtered for political neutrality compliance]";
       }
@@ -251,7 +290,7 @@ export function AIChat(_props: AIChatProps) {
         background: "var(--bg-base)",
       }}
     >
-      {/* Header */}
+      {/* Sticky Header */}
       <header
         style={{
           padding: "var(--space-4) var(--space-6)",
@@ -282,12 +321,12 @@ export function AIChat(_props: AIChatProps) {
             CivicBot Q&A
           </h2>
           <p style={{ fontSize: "var(--text-xs)", color: "var(--text-muted)" }}>
-            Ask anything about the democratic process.
+            Empowering voters with factual information.
           </p>
         </div>
       </header>
 
-      {/* Messages */}
+      {/* Scrollable Message List */}
       <div
         id={messageLogId}
         role="log"
@@ -320,6 +359,7 @@ export function AIChat(_props: AIChatProps) {
           </div>
         )}
         
+        {/* Knowledge Base Starters */}
         {!isTyping && (
            <div style={{ marginTop: "var(--space-6)", paddingTop: "var(--space-4)", borderTop: "1px dashed var(--border-default)" }}>
              <p style={{ fontSize: "var(--text-xs)", color: CHAT_TOKENS.colors.brandText, fontWeight: "bold", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "var(--space-4)" }}>

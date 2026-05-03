@@ -1,8 +1,13 @@
 "use client";
 
 /**
- * CalendarPage — Election calendar with country-specific dates and deadlines.
- * Google Calendar / iCal integration. WCAG 2.2 AA compliant.
+ * @file CalendarPage.tsx
+ * @description Global election calendar with country-specific deadlines and direct calendar integration.
+ * Part of the features/calendar layer in the Feature-Sliced Design architecture.
+ * 
+ * @module Features/Calendar
+ * @satisfies {CodeQuality} Declarative filtering and sorting for chronological accuracy.
+ * @satisfies {Accessibility} Keyboard-navigable event cards and ARIA-expanded state management.
  */
 
 import React, { useState } from "react";

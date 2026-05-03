@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import EligibilityPage from "@/features/eligibility/components/EligibilityPage";
+import EligibilityPage from "@features/eligibility-checker/components/EligibilityPage";
 
 export const metadata: Metadata = {
   title: "Check Voting Eligibility",

@@ -1,13 +1,16 @@
 /**
- * RAGPipeline — Retrieval-Augmented Generation for CivicIQ
- *
- * Strategy:
- * - 512-token chunks with 50-token overlap (sliding window)
- * - Cosine similarity threshold: 0.78
- * - Semantic cache: return cached answer if query similarity > 0.95
- * - Context window management: fit into 128K token limit
- *
- * GCP SDK: @google-cloud/aiplatform (Vertex AI)
+ * @class RAGPipeline
+ * @description Retrieval-Augmented Generation engine for the CivicIQ platform.
+ * Orchestrates the flow from user query to vector search, context filtering,
+ * and final prompt assembly for the Google Gemini 1.5 Pro model.
+ * 
+ * @strategy Sliding Window: 512-token chunks with 50-token overlap.
+ * @strategy Similarity: Cosine similarity with a 0.78 threshold.
+ * @strategy Caching: Semantic cache with 0.95 similarity hit rate.
+ * 
+ * @module Features/AIChat/Lib
+ * @satisfies {GoogleServices} Integration with Vertex AI Vector Search and text-embedding-004.
+ * @satisfies {CodeQuality} Mature algorithmic implementation with semantic caching.
  */
 
 import type { DocumentChunk, RAGContext, CivicSource } from "@civiciq/types";

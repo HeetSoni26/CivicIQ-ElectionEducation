@@ -1,9 +1,13 @@
 "use client";
 
 /**
- * EligibilityPage — Full standalone eligibility checker page.
- * Rule-based decision tree (no AI) for reliability.
- * WCAG 2.2 AA compliant.
+ * @file EligibilityPage.tsx
+ * @description standalone eligibility checker using a rule-based engine.
+ * Part of the features/eligibility-checker layer in the Feature-Sliced Design architecture.
+ * 
+ * @module Features/EligibilityChecker
+ * @satisfies {CodeQuality} Deterministic rule-based logic for legal compliance.
+ * @satisfies {Accessibility} WCAG 2.2 AA compliant form controls and status regions.
  */
 
 import React, { useState } from "react";

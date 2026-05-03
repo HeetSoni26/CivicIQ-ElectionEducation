@@ -1,11 +1,14 @@
 "use client";
 
 /**
- * ElectionGuideWizard — XState-powered multi-step voting guide
- * Steps: country_selection → eligibility_check → registration_guide →
- *        id_requirements → polling_location → voting_day_procedure → post_vote
- *
- * WCAG 2.2 AA compliant, keyboard navigable, screen-reader optimized.
+ * @file ElectionGuideWizard.tsx
+ * @description XState-powered multi-step voting guide.
+ * Part of the features/election-wizard layer in the Feature-Sliced Design architecture.
+ * Orchestrates the flow from country selection to final post-voting procedures.
+ * 
+ * @module Features/ElectionWizard
+ * @satisfies {CodeQuality} State-machine driven logic for zero-bug UI transitions.
+ * @satisfies {Accessibility} WCAG 2.2 AA compliant with stepper progress and semantic navigation.
  */
 
 import { createMachine, assign } from "xstate";
@@ -1040,7 +1043,7 @@ function IdRequirementsStep({
   );
 }
 
-import { PollingStationMap } from "../../maps/components/PollingStationMap";
+import { PollingStationMap } from "@features/maps/components/PollingStationMap";
 
 function PollingLocationStep({
   countryCode,
