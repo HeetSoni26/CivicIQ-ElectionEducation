@@ -1,0 +1,259 @@
+// firestore.rules
+// CivicIQ — Complete Firestore Security Rules
+// Implements ABAC (Attribute-Based Access Control) for all collections.
+// Version: 1.0.0 — Reviewed and production-hardened.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helper Functions
+    // ─────────────────────────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAnonymous() {
+      return isAuthenticated() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function hasRole(role) {
+      return isAuthenticated() && request.auth.token.role == role;
+    }
+
+    function isAdmin() {
+      return hasRole('admin');
+    }
+
+    function isEducator() {
+      return hasRole('educator') || isAdmin();
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function onlyFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isVerifiedEducator() {
+      return isEducator() && request.auth.token.educatorVerified == true;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /users/{userId}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+
+      allow create: if isOwner(userId)
+        && onlyFields([
+          'uid', 'email', 'role', 'countryCode', 'preferredLanguage',
+          'createdAt', 'updatedAt', 'isAnonymous', 'classroomIds'
+        ])
+        && request.resource.data.uid == userId
+        && (request.resource.data.role == 'registered' || request.resource.data.role == 'anonymous');
+
+      allow update: if isOwner(userId)
+        && onlyFields(['countryCode', 'preferredLanguage', 'updatedAt']);
+
+      allow update: if isAdmin();
+
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /countryConfigs/{countryCode}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /countryConfigs/{countryCode} {
+      allow read: if true;
+      allow write: if isAdmin();
+
+      match /states/{stateCode} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /civicContent/{contentId}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /civicContent/{contentId} {
+      allow read: if resource.data.isActive == true;
+      allow read: if isAdmin();
+
+      allow create: if isVerifiedEducator()
+        && onlyFields([
+          'countryCode', 'contentType', 'title', 'body', 'sourceUrl',
+          'sourceOrganization', 'fleschKincaidGrade', 'publishedAt', 'updatedAt',
+          'version', 'publishedBy', 'isActive', 'tags'
+        ])
+        && request.resource.data.isActive == false
+        && request.resource.data.fleschKincaidGrade <= 8.0
+        && request.resource.data.publishedBy == request.auth.uid;
+
+      allow update: if isVerifiedEducator()
+        && resource.data.publishedBy == request.auth.uid
+        && resource.data.isActive == false
+        && onlyFields([
+          'title', 'body', 'sourceUrl', 'sourceOrganization',
+          'fleschKincaidGrade', 'updatedAt', 'version', 'tags'
+        ])
+        && request.resource.data.fleschKincaidGrade <= 8.0;
+
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /quizQuestions/{questionId}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /quizQuestions/{questionId} {
+      allow read: if true;
+      allow create: if isVerifiedEducator()
+        && request.resource.data.approved == false;
+      allow update, delete: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /quizAttempts/{attemptId}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /quizAttempts/{attemptId} {
+      allow read: if isOwner(resource.data.userId);
+      allow read: if isVerifiedEducator()
+        && resource.data.classroomId in request.auth.token.classroomIds;
+      allow read: if isAdmin();
+
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && onlyFields([
+          'id', 'userId', 'quizId', 'countryCode', 'answers',
+          'score', 'completedAt', 'timeTakenSeconds', 'classroomId'
+        ]);
+
+      allow update: if false;
+
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /conversations/{sessionId}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /conversations/{sessionId} {
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && onlyFields([
+          'sessionId', 'userId', 'countryCode', 'language',
+          'messages', 'createdAt', 'updatedAt', 'tokenCount'
+        ])
+        && request.resource.data.messages.size() <= 10;
+
+      allow update: if isAuthenticated()
+        && resource.data.userId == request.auth.uid
+        && onlyFields(['messages', 'updatedAt', 'tokenCount'])
+        && request.resource.data.tokenCount <= 128000;
+
+      allow delete: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+
+      allow read: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /electionTimelines/{timelineId}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /electionTimelines/{timelineId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /classrooms/{classroomId}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /classrooms/{classroomId} {
+      allow read: if isVerifiedEducator() && resource.data.educatorId == request.auth.uid;
+      allow read: if isAuthenticated() && request.auth.uid in resource.data.studentIds;
+      allow read: if isAdmin();
+
+      allow create: if isVerifiedEducator()
+        && request.resource.data.educatorId == request.auth.uid
+        && onlyFields([
+          'id', 'educatorId', 'name', 'studentIds', 'assignedQuizIds',
+          'createdAt', 'updatedAt', 'description'
+        ]);
+
+      allow update: if isVerifiedEducator()
+        && resource.data.educatorId == request.auth.uid
+        && onlyFields(['name', 'studentIds', 'assignedQuizIds', 'updatedAt', 'description']);
+
+      allow delete: if isVerifiedEducator() && resource.data.educatorId == request.auth.uid;
+      allow write: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /notifications/{notificationId}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /notifications/{notificationId} {
+      allow read: if isOwner(resource.data.userId);
+
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid
+        && onlyFields(['userId', 'topic', 'countryCode', 'createdAt', 'isActive']);
+
+      allow update: if isOwner(resource.data.userId)
+        && onlyFields(['isActive', 'updatedAt']);
+
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /analyticsEvents/{eventId}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /analyticsEvents/{eventId} {
+      allow read: if isAdmin();
+
+      allow create: if isAuthenticated()
+        && onlyFields([
+          'event', 'countryCode', 'language', 'sessionId', 'timestamp', 'properties'
+        ])
+        && request.resource.data.sessionId is string
+        && request.resource.data.sessionId.size() == 32;
+
+      allow update, delete: if false;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // /systemConfig/{configId}
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /systemConfig/{configId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Default: deny everything else
+    // ─────────────────────────────────────────────────────────────────────────
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

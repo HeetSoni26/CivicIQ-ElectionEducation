@@ -1,0 +1,372 @@
+name: CivicIQ CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  ARTIFACT_REGISTRY: us-central1-docker.pkg.dev
+  IMAGE_NAME: civiciq/ai-assistant-service
+
+jobs:
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 1: Quality Gates — TypeScript, ESLint, Prettier
+  # ════════════════════════════════════════════════════════════════════════════
+  quality:
+    name: 🔍 Quality Gates
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+          cache: "npm"
+      - run: npm ci --ignore-scripts
+      - name: TypeScript strict compilation
+        run: npx tsc --noEmit
+      - name: ESLint zero warnings
+        run: npx eslint . --max-warnings 0 --ext .ts,.tsx
+      - name: Prettier format check
+        run: npx prettier --check "src/**/*.{ts,tsx,css}"
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 2: Unit Tests with 90% coverage enforcement
+  # ════════════════════════════════════════════════════════════════════════════
+  test:
+    name: 🧪 Unit Tests & Coverage
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+          cache: "npm"
+      - run: npm ci --ignore-scripts
+      - name: Run unit tests with coverage enforcement
+        run: |
+          npx vitest run \
+            --coverage \
+            --coverage.reporter=text \
+            --coverage.reporter=lcov \
+            --coverage.thresholds.lines=90 \
+            --coverage.thresholds.functions=90 \
+            --coverage.thresholds.branches=85
+      - uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage/lcov.info
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 3: Integration Tests (Firebase Emulator)
+  # ════════════════════════════════════════════════════════════════════════════
+  integration:
+    name: 🔗 Integration Tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+          cache: "npm"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm install -g firebase-tools@13.x
+      - run: npm ci --ignore-scripts
+      - name: Start Firebase Emulator and run integration tests
+        run: |
+          firebase emulators:exec \
+            --only firestore,auth \
+            --project civiciq-test \
+            "npx vitest run src/**/*.integration.test.ts"
+        env:
+          FIRESTORE_EMULATOR_HOST: localhost:8080
+          FIREBASE_AUTH_EMULATOR_HOST: localhost:9099
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 4: E2E & Accessibility Tests (Playwright + axe-core)
+  # ════════════════════════════════════════════════════════════════════════════
+  e2e:
+    name: 🎭 E2E & Accessibility
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    needs: [quality, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+          cache: "npm"
+      - run: npm ci --ignore-scripts
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000
+      - name: Run Playwright E2E + accessibility tests
+        run: npx playwright test --reporter=html,github
+        env:
+          BASE_URL: http://localhost:3000
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 5: Performance Budget (Lighthouse CI)
+  # ════════════════════════════════════════════════════════════════════════════
+  performance:
+    name: ⚡ Lighthouse Performance Budget
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    needs: quality
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+          cache: "npm"
+      - run: npm ci --ignore-scripts
+      - run: npm install -g @lhci/cli@0.14.x
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000
+      - name: Run Lighthouse CI (LCP<1.8s, FID<50ms, CLS<0.05)
+        run: lhci autorun
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 6: OWASP ZAP Security Scan
+  # ════════════════════════════════════════════════════════════════════════════
+  security:
+    name: 🔐 OWASP ZAP Security Scan
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+          cache: "npm"
+      - run: npm ci --ignore-scripts
+      - name: Build and start app
+        run: |
+          npm run build &
+          npx next start &
+          sleep 10
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:3000
+      - name: OWASP ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: "http://localhost:3000"
+          fail_action: true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: report_html.html
+          retention-days: 30
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 7: AI Evaluation Harness
+  # ════════════════════════════════════════════════════════════════════════════
+  ai_eval:
+    name: 🤖 AI Evaluation Harness
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+          cache: "npm"
+      - run: npm ci --ignore-scripts
+      - name: Run AI evaluation harness
+        run: npx vitest run src/features/ai-chat/lib/AIEvalHarness.test.ts
+        env:
+          VERTEX_AI_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+          VERTEX_AI_LOCATION: us-central1
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 8: Build & Push Docker Image to Artifact Registry
+  # ════════════════════════════════════════════════════════════════════════════
+  docker:
+    name: 🐳 Build & Push Docker Image
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    needs: [test, e2e, performance]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - run: gcloud auth configure-docker ${{ env.ARTIFACT_REGISTRY }} --quiet
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 9: Blue-Green Deploy to Cloud Run
+  # ════════════════════════════════════════════════════════════════════════════
+  deploy_cloud_run:
+    name: 🚀 Deploy Cloud Run (Blue-Green)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    needs: [docker, ai_eval]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - name: Deploy candidate revision (0% traffic)
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: civiciq-ai-assistant
+          region: ${{ env.REGION }}
+          image: ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          flags: |
+            --no-traffic
+            --tag=candidate
+            --cpu=2
+            --memory=2Gi
+            --concurrency=80
+            --timeout=30s
+            --min-instances=1
+            --max-instances=100
+            --set-secrets=VERTEX_AI_KEY=vertex-ai-key:latest,REDIS_PASSWORD=redis-password:latest
+            --set-env-vars=NODE_ENV=production,PROJECT_ID=${{ env.PROJECT_ID }}
+            --vpc-connector=civiciq-vpc-connector
+            --service-account=civiciq-run-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+      - name: Smoke test candidate
+        run: |
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ steps.deploy.outputs.url }}/health")
+          [ "${HTTP_STATUS}" = "200" ] || exit 1
+          echo "Candidate healthy ✅"
+      - name: Migrate 100% traffic to new revision
+        run: |
+          gcloud run services update-traffic civiciq-ai-assistant \
+            --to-tags=candidate=100 \
+            --region=${{ env.REGION }} \
+            --project=${{ env.PROJECT_ID }}
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 10: Deploy Firebase Hosting
+  # ════════════════════════════════════════════════════════════════════════════
+  deploy_firebase:
+    name: 🔥 Deploy Firebase Hosting
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    needs: [test, e2e, performance]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20.11.1"
+          cache: "npm"
+      - run: npm ci --ignore-scripts
+      - name: Build for production
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.PRODUCTION_API_URL }}
+          NEXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ env.PROJECT_ID }}
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
+          channelId: live
+          projectId: ${{ env.PROJECT_ID }}
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 11: Production Smoke Tests
+  # ════════════════════════════════════════════════════════════════════════════
+  smoke:
+    name: 💨 Production Smoke Tests
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    needs: [deploy_cloud_run, deploy_firebase]
+    steps:
+      - name: Run production smoke tests
+        run: |
+          PROD="${{ secrets.PRODUCTION_URL }}"
+          for path in "" "/guide" "/eligibility" "/chat" "/quiz" "/calendar"; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${PROD}${path}")
+            [ "${STATUS}" = "200" ] && echo "✅ ${PROD}${path}" || (echo "❌ ${PROD}${path} (${STATUS})" && exit 1)
+          done
+
+  # ════════════════════════════════════════════════════════════════════════════
+  # JOB 12: Slack Deployment Notification
+  # ════════════════════════════════════════════════════════════════════════════
+  notify:
+    name: 📣 Slack Notification
+    runs-on: ubuntu-22.04
+    needs: [smoke]
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {
+              "text": "${{ needs.smoke.result == 'success' && '✅ CivicIQ Deployed Successfully' || '❌ CivicIQ Deployment Failed' }} — Commit <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}> by ${{ github.actor }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ needs.smoke.result == 'success' && ':white_check_mark:' || ':x:' }} *CivicIQ* deployment ${{ needs.smoke.result }} | <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|View Workflow> | <${{ secrets.PRODUCTION_URL }}|View Production>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
