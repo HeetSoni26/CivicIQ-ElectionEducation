@@ -13,27 +13,27 @@ import type { ChatMessage, CivicSource, LanguageCode } from "@civiciq/types";
 const PREDEFINED_QA: Record<string, { answer: string; sources: CivicSource[] }> = {
   "Am I eligible to vote in my country?": {
     answer: "Eligibility varies by country, but generally, you must be a citizen, meet the minimum age requirement (usually 18), and be registered to vote. Some countries also have residency requirements.",
-    sources: [{ title: "General Voting Requirements", url: "#", organization: "CivicIQ Guide" }]
+    sources: [{ title: "General Voting Requirements", url: "#", organization: "CivicIQ Guide", retrievedAt: new Date().toISOString() }]
   },
   "How do I register to vote?": {
     answer: "You can usually register online, by mail, or in person at designated government offices. Deadlines apply, so it's best to register well in advance of election day.",
-    sources: [{ title: "Voter Registration Options", url: "#", organization: "CivicIQ Guide" }]
+    sources: [{ title: "Voter Registration Options", url: "#", organization: "CivicIQ Guide", retrievedAt: new Date().toISOString() }]
   },
   "What ID do I need to bring to vote?": {
     answer: "ID requirements depend on your location. Some places require government-issued photo ID (like a driver's license or passport), while others accept non-photo IDs like utility bills, or no ID at all if you are already registered.",
-    sources: [{ title: "Voter ID Laws", url: "#", organization: "CivicIQ Guide" }]
+    sources: [{ title: "Voter ID Laws", url: "#", organization: "CivicIQ Guide", retrievedAt: new Date().toISOString() }]
   },
   "When is the next election in my country?": {
     answer: "Election dates depend on your specific country and local municipality. You can check our Election Calendar feature to see all upcoming dates and deadlines for your area.",
-    sources: [{ title: "Election Calendar", url: "/calendar", organization: "CivicIQ Tools" }]
+    sources: [{ title: "Election Calendar", url: "/calendar", organization: "CivicIQ Tools", retrievedAt: new Date().toISOString() }]
   },
   "How does the voting process work step by step?": {
     answer: "1. Register to vote.\n2. Verify your polling location.\n3. Bring necessary ID.\n4. Request a ballot.\n5. Fill out your ballot privately.\n6. Submit your ballot into the secure scanner or box.",
-    sources: [{ title: "Voting Process Guide", url: "/guide", organization: "CivicIQ Tools" }]
+    sources: [{ title: "Voting Process Guide", url: "/guide", organization: "CivicIQ Tools", retrievedAt: new Date().toISOString() }]
   },
   "Can I vote by mail or absentee?": {
     answer: "Yes, many regions allow absentee or mail-in voting. You typically need to request a ballot in advance. Some areas automatically mail ballots to all registered voters.",
-    sources: [{ title: "Mail-in Voting Options", url: "#", organization: "CivicIQ Guide" }]
+    sources: [{ title: "Mail-in Voting Options", url: "#", organization: "CivicIQ Guide", retrievedAt: new Date().toISOString() }]
   }
 };
 
