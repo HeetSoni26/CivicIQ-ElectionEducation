@@ -184,11 +184,7 @@ interface AIChatProps {
   sessionId?: string;
 }
 
-export function AIChat({
-  countryCode,
-  language = "en",
-  sessionId = crypto.randomUUID(),
-}: AIChatProps) {
+export function AIChat(_props: AIChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -312,7 +308,7 @@ export function AIChat({
                 marginBottom: "var(--space-2)",
               }}
             >
-              👋 Hello! I'm CivicBot.
+              👋 Hello! I&apos;m CivicBot.
             </p>
             <p
               style={{

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 
 // Mock Data for the Dashboard
 const MOCK_STUDENTS = [
@@ -31,7 +30,7 @@ export function EducatorDashboard() {
             <span className="badge badge-primary" style={{ marginBottom: "var(--space-2)" }}>Educator Mode</span>
             <h1 style={{ fontSize: "var(--text-3xl)", letterSpacing: "-0.02em" }}>Civic Classroom Dashboard</h1>
             <p style={{ color: "var(--text-secondary)", marginTop: "var(--space-2)" }}>
-              Manage your students' civic education progress, assign quizzes, and access lesson plans.
+              Manage your students&apos; civic education progress, assign quizzes, and access lesson plans.
             </p>
           </div>
           <button className="btn btn-primary">
