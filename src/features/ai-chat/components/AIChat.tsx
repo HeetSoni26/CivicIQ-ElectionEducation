@@ -184,6 +184,7 @@ interface AIChatProps {
   sessionId?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function AIChat(_props: AIChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
