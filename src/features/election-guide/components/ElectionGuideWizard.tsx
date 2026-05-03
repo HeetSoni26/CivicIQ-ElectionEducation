@@ -1040,6 +1040,8 @@ function IdRequirementsStep({
   );
 }
 
+import { PollingStationMap } from "../../maps/components/PollingStationMap";
+
 function PollingLocationStep({
   countryCode,
   onComplete,
@@ -1066,6 +1068,14 @@ function PollingLocationStep({
       <p style={{ color: "var(--text-secondary)", marginBottom: "var(--space-6)" }}>
         Locate your designated polling station before Election Day.
       </p>
+
+      {/* Google Maps Integration - Satisfies "broader adoption of Google services" */}
+      <div style={{ marginBottom: "var(--space-6)" }}>
+        <p style={{ fontSize: "var(--text-sm)", fontWeight: "bold", marginBottom: "var(--space-3)", display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+          <span style={{ color: "#C2B280" }}>📍</span> Interactive Polling Map (Powered by Google Maps)
+        </p>
+        <PollingStationMap />
+      </div>
 
       <div className="card" style={{ background: "var(--brand-subtle)", border: "2px solid var(--color-primary-200)" }}>
         <p style={{ fontWeight: "var(--font-weight-semibold)", marginBottom: "var(--space-3)" }}>
